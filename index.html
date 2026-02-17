@@ -3,54 +3,89 @@
 <head>
     <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #f00; text-align: center; font-family: monospace; }
+        body { margin: 0; background: #000; color: #f00; text-align: center; font-family: monospace; overflow: hidden; }
         #dos { width: 100vw; height: 80vh; background: #111; }
         .ui { padding: 15px; background: #111; border-top: 2px solid #f00; }
-        #deploy-btn { padding: 12px 25px; background: #f00; color: white; border: none; cursor: pointer; font-weight: bold; }
+        button { padding: 10px 20px; background: #f00; color: white; border: none; cursor: pointer; font-weight: bold; margin: 5px; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        #status { color: yellow; font-size: 12px; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div id="dos"></div>
     <div class="ui">
         <button id="deploy-btn">DEPLOY BRUTAL DOOM</button>
-        <p id="status" style="color: yellow; font-size: 14px;">Ready.</p>
+        <button id="fs-btn">FULLSCREEN</button>
+        <button id="save-btn" disabled>EXPORT SAVE</button>
+        <button id="load-btn">IMPORT SAVE</button>
+        <input type="file" id="save-picker" style="display:none">
+        <p id="status">Engine Initializing...</p>
     </div>
 
     <script>
-        // Only ONE declaration for ci
-        var ci; 
+        var ci; // Only declared once to avoid SyntaxError
         const container = document.getElementById("dos");
+        const status = document.getElementById('status');
 
-        // Initialize engine
+        // Initialize the Engine
         Dos(container).then(runtime => { 
             ci = runtime; 
-            console.log("ENGINE LOADED SUCCESSFULLY");
-            document.getElementById('status').innerText = "Engine Ready. Click Deploy.";
+            status.innerText = "Engine Ready. Click Deploy.";
+            console.log("JS-DOS Ready");
         });
 
-        // Use addEventListener to bypass "inline event handler" CSP blocks
-        document.getElementById('deploy-btn').addEventListener('click', async function() {
-            const status = document.getElementById('status');
-            if (!ci) return alert("Engine still loading, please wait...");
+        // 1. DEPLOY LOGIC (Bypasses Company Policy Blocks)
+        document.getElementById('deploy-btn').addEventListener('click', async () => {
+            if (!ci) return;
+            const btn = document.getElementById('deploy-btn');
+            btn.disabled = true;
 
             try {
-                status.innerText = "Step 1: Fetching DOOM2.WAD...";
+                // Step 1: Get the Game
+                status.innerText = "Fetching DOOM2.WAD (15MB)...";
                 const wadRes = await fetch("https://archive.org/download/doom-2-iwad/DOOM2.WAD");
                 const wadData = await wadRes.arrayBuffer();
                 await ci.fs.extract(new Uint8Array(wadData), "doom2.wad");
 
-                status.innerText = "Step 2: Fetching Mod (150MB) - Please wait...";
+                // Step 2: Get the Mod
+                status.innerText = "Fetching Mod (150MB) - Do not close tab...";
                 const modRes = await fetch("https://archive.org/download/brutal-doom-v-21/brutalv21.pk3");
                 const modData = await modRes.arrayBuffer();
                 await ci.fs.extract(new Uint8Array(modData), "brutalv21.pk3");
 
-                status.innerText = "Step 3: Launching...";
+                // Step 3: Launch
+                status.innerText = "Igniting Engine...";
+                document.getElementById('save-btn').disabled = false;
                 ci.main(["-iwad", "doom2.wad", "-file", "brutalv21.pk3"]);
             } catch (err) {
                 status.innerText = "CRITICAL ERROR: " + err.message;
-                console.error(err);
+                btn.disabled = false;
             }
         });
-    </script>
-</body>
-</html>
+
+        // 2. FULLSCREEN LOGIC
+        document.getElementById('fs-btn').addEventListener('click', () => {
+            if (ci) ci.fullscreen();
+        });
+
+        // 3. SAVE LOGIC
+        document.getElementById('save-btn').addEventListener('click', async () => {
+            if (!ci) return;
+            const changes = await ci.fs.persist();
+            const blob = new Blob([changes], { type: "application/zip" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "brutal_doom_save.zip";
+            a.click();
+        });
+
+        // 4. LOAD LOGIC
+        document.getElementById('load-btn').addEventListener('click', () => {
+            document.getElementById('save-picker').click();
+        });
+
+        document.getElementById('save-picker').addEventListener('change', async (e) => {
+            if (!ci || !e.target.files[0]) return;
+            status.innerText = "Injecting Save File...";
+            const data = await e.target.files[0].arrayBuffer
