@@ -4,20 +4,15 @@
     <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
     <style>
         body { margin: 0; background: #000; color: #f00; text-align: center; font-family: monospace; }
-        #dos { width: 100vw; height: 80vh; background: #111; }
-        .controls { padding: 20px; background: #222; border-top: 2px solid #f00; }
-        input { background: #333; color: #fff; border: 1px solid #f00; margin: 5px; padding: 5px; }
-        button { padding: 10px 25px; background: #f00; color: #fff; border: none; cursor: pointer; font-weight: bold; }
-        button:disabled { background: #555; cursor: not-allowed; }
+        #dos { width: 100vw; height: 85vh; }
+        .ui { padding: 10px; background: #111; border-top: 2px solid #f00; }
     </style>
 </head>
 <body>
     <div id="dos"></div>
-    <div class="controls">
-        WAD (The Game): <input type="file" id="wad" onchange="check()">
-        PK3 (The Mod): <input type="file" id="pk3" onchange="check()">
-        <br><br>
-        <button id="go" onclick="run()" disabled>START BRUTAL DOOM</button>
+    <div class="ui">
+        SELECT DOOM2.WAD: <input type="file" id="wad-file">
+        <button onclick="launch()">START BRUTAL DOOM</button>
     </div>
 
     <script>
@@ -25,24 +20,21 @@
         let ci;
         Dos(container).then(runtime => { ci = runtime; });
 
-        function check() {
-            const w = document.getElementById('wad').files[0];
-            const p = document.getElementById('pk3').files[0];
-            document.getElementById('go').disabled = !(w && p);
-        }
+        async function launch() {
+            const wadInput = document.getElementById('wad-file').files[0];
+            if (!wadInput) return alert("Please select your doom2.wad first!");
 
-        async function run() {
-            const wFile = document.getElementById('wad').files[0];
-            const pFile = document.getElementById('pk3').files[0];
-            
-            // Extracting files into the virtual drive
-            const wData = await wFile.arrayBuffer();
-            await ci.fs.extract(new Uint8Array(wData), wFile.name);
-            const pData = await pFile.arrayBuffer();
-            await ci.fs.extract(new Uint8Array(pData), pFile.name);
-            
-            // This tells the engine to skip the C prompt and load the mod
-            ci.main(["-iwad", wFile.name, "-file", pFile.name]);
+            // 1. Load the WAD from your Chromebook
+            const wadData = await wadInput.arrayBuffer();
+            await ci.fs.extract(new Uint8Array(wadData), "doom2.wad");
+
+            // 2. FETCH the mod from YOUR GitHub repo
+            const modRes = await fetch("brutalv21.pk3");
+            const modData = await modRes.arrayBuffer();
+            await ci.fs.extract(new Uint8Array(modData), "brutalv21.pk3");
+
+            // 3. AUTO-START the carnage
+            ci.main(["-iwad", "doom2.wad", "-file", "brutalv21.pk3"]);
         }
     </script>
 </body>
