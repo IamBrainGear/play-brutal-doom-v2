@@ -4,7 +4,7 @@ A high-performance web-based launcher for **Brutal Doom** (v21) designed to run 
 
 ## 🚀 Quick Start
 
-1. **Visit the Site:** Open the [https://IamBrainGear.github.io/play-brutal-doom/].
+1. **Visit the Site:** Open the [Brutal Doom Web Launcher](https://IamBrainGear.github.io/play-brutal-doom/)
 2. **Select Your Files:** Drag and drop or select the following files from your local machine:
    * `doom2.wad` (The base game)
    * `brutalv21.pk3` (The mod)
