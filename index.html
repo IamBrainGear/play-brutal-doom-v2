@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Brutal Doom Web Player</title>
+    <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background: #000; color: #f00; font-family: 'Courier New', monospace; overflow: hidden; }
+        #dos-container { width: 100vw; height: 100vh; }
+        #overlay { position: absolute; top: 10px; left: 10px; z-index: 10; background: rgba(0,0,0,0.7); padding: 10px; border: 1px solid #f00; }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        1. Drag DOOM2.WAD & BRUTALV21.PK3 here<br>
+        2. Click the Screen to Start
+    </div>
+    <div id="dos-container"></div>
+    <script>
+        const container = document.getElementById("dos-container");
+        Dos(container, {
+            style: "filled",
+        }).then((runtime) => {
+            console.log("js-dos Engine Ready");
+            // The engine handles the file mounting automatically when you drag/drop
+        });
+    </script>
+</body>
+</html>
