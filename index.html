@@ -4,56 +4,82 @@
     <script src="https://v8.js-dos.com/latest/js-dos.js"></script>
     <style>
         body { margin: 0; background: #000; color: #f00; text-align: center; font-family: monospace; }
-        #dos { width: 100vw; height: 85vh; background: #111; }
-        .ui { padding: 15px; background: #111; border-top: 2px solid #f00; }
-        #start-btn { padding: 10px 20px; background: #f00; color: white; border: none; cursor: pointer; font-weight: bold; }
+        #dos { width: 100vw; height: 80vh; background: #111; }
+        .ui { padding: 10px; background: #111; border-top: 2px solid #f00; }
+        button { padding: 8px 15px; background: #f00; color: white; border: none; cursor: pointer; font-weight: bold; margin: 5px; }
+        button:disabled { background: #444; }
+        .save-load { border-left: 1px solid #444; padding-left: 10px; display: inline-block; }
     </style>
 </head>
 <body>
     <div id="dos"></div>
     <div class="ui">
-        1. SELECT DOOM2.WAD: <input type="file" id="wad-file">
-        2. <button id="start-btn">INITIALIZE BRUTAL DOOM</button>
-        <p id="status" style="color: yellow; font-size: 12px;"></p>
+        <button id="start-btn">DEPLOY BRUTAL DOOM</button>
+        
+        <div class="save-load">
+            <button id="save-btn" onclick="saveGame()" disabled>EXPORT SAVE</button>
+            <button id="load-btn" onclick="document.getElementById('save-picker').click()">IMPORT SAVE</button>
+            <input type="file" id="save-picker" style="display:none" onchange="loadGame(this)">
+        </div>
+        
+        <p id="status" style="color: yellow; font-size: 11px;">Zero-Upload Mode Active.</p>
     </div>
 
     <script>
         const container = document.getElementById("dos");
-        let ci; // Declared only ONCE now
+        let ci;
 
-        // Initialize the engine
         Dos(container).then(runtime => { 
             ci = runtime; 
             console.log("JS-DOS Ready");
         });
 
-        // Add the click listener here to bypass CSP "inline" errors
         document.getElementById('start-btn').addEventListener('click', async () => {
-            const wadInput = document.getElementById('wad-file').files[0];
-            if (!wadInput) return alert("Please select your local doom2.wad first!");
             const status = document.getElementById('status');
+            const btn = document.getElementById('start-btn');
+            btn.disabled = true;
 
             try {
-                // 1. Load local WAD
-                status.innerText = "Loading local WAD...";
-                const wadData = await wadInput.arrayBuffer();
+                status.innerText = "Fetching DOOM2.WAD...";
+                const wadRes = await fetch("https://archive.org/download/doom-2-iwad/DOOM2.WAD");
+                const wadData = await wadRes.arrayBuffer();
                 await ci.fs.extract(new Uint8Array(wadData), "doom2.wad");
 
-                // 2. Fetch Mod
-                status.innerText = "Downloading Mod (150MB) - This takes ~1 minute...";
-                const modUrl = "https://archive.org/download/brutal-doom-v-21/brutalv21.pk3";
-                const modRes = await fetch(modUrl);
+                status.innerText = "Fetching BRUTALV21.PK3 (150MB)...";
+                const modRes = await fetch("https://archive.org/download/brutal-doom-v-21/brutalv21.pk3");
                 const modData = await modRes.arrayBuffer();
                 await ci.fs.extract(new Uint8Array(modData), "brutalv21.pk3");
 
-                // 3. Start Game
                 status.innerText = "Starting Carnage...";
+                document.getElementById('save-btn').disabled = false;
                 ci.main(["-iwad", "doom2.wad", "-file", "brutalv21.pk3"]);
             } catch (err) {
-                status.innerText = "Error: " + err.message;
-                console.error(err);
+                status.innerText = "Error: Check connection/firewall.";
+                btn.disabled = false;
             }
         });
+
+        // Function to download your current save
+        async function saveGame() {
+            if (!ci) return;
+            const changes = await ci.fs.persist(); // Collects saved games and config
+            const blob = new Blob([changes], { type: "application/zip" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "brutal_doom_save.zip";
+            a.click();
+        }
+
+        // Function to reload a previously exported save
+        async function loadGame(input) {
+            if (!ci || !input.files[0]) return;
+            const status = document.getElementById('status');
+            status.innerText = "Applying Save File...";
+            const data = await input.files[0].arrayBuffer();
+            await ci.fs.extract(new Uint8Array(data)); // Injects the save back into the C: drive
+            status.innerText = "Save Loaded. Start the game to see your progress.";
+        }
     </script>
 </body>
 </html>
