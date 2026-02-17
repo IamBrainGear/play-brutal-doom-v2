@@ -5,14 +5,16 @@
     <style>
         body { margin: 0; background: #000; color: #f00; text-align: center; font-family: monospace; }
         #dos { width: 100vw; height: 85vh; }
-        .ui { padding: 10px; background: #111; border-top: 2px solid #f00; }
+        .ui { padding: 15px; background: #111; border-top: 2px solid #f00; }
+        button { padding: 10px 20px; background: #f00; color: white; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="dos"></div>
     <div class="ui">
-        SELECT DOOM2.WAD: <input type="file" id="wad-file">
-        <button onclick="launch()">START BRUTAL DOOM</button>
+        1. SELECT DOOM2.WAD: <input type="file" id="wad-file">
+        2. <button onclick="launch()">INITIALIZE BRUTAL DOOM</button>
+        <p id="status" style="color: yellow; font-size: 12px;"></p>
     </div>
 
     <script>
@@ -22,18 +24,23 @@
 
         async function launch() {
             const wadInput = document.getElementById('wad-file').files[0];
-            if (!wadInput) return alert("Please select your doom2.wad first!");
+            if (!wadInput) return alert("Please select your local doom2.wad first!");
+            const status = document.getElementById('status');
 
-            // 1. Load the WAD from your Chromebook
+            // 1. Load your local WAD
+            status.innerText = "Loading local WAD...";
             const wadData = await wadInput.arrayBuffer();
             await ci.fs.extract(new Uint8Array(wadData), "doom2.wad");
 
-            // 2. FETCH the mod from YOUR GitHub repo
-            const modRes = await fetch("brutalv21.pk3");
+            // 2. Fetch the Mod from the Web
+            status.innerText = "Downloading Mod (150MB) - Please wait, do not close tab...";
+            const modUrl = "https://archive.org/download/brutal-doom-v-21/brutalv21.pk3";
+            const modRes = await fetch(modUrl);
             const modData = await modRes.arrayBuffer();
             await ci.fs.extract(new Uint8Array(modData), "brutalv21.pk3");
 
-            // 3. AUTO-START the carnage
+            // 3. Start the Game
+            status.innerText = "Starting Carnage...";
             ci.main(["-iwad", "doom2.wad", "-file", "brutalv21.pk3"]);
         }
     </script>
