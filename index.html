@@ -5,51 +5,52 @@
     <style>
         body { margin: 0; background: #000; color: #f00; text-align: center; font-family: monospace; }
         #dos { width: 100vw; height: 80vh; background: #111; }
-        .ui { padding: 10px; background: #111; border-top: 2px solid #f00; }
-        button { padding: 10px 20px; background: #f00; color: white; border: none; cursor: pointer; font-weight: bold; margin: 5px; }
+        .ui { padding: 15px; background: #111; border-top: 2px solid #f00; }
+        #deploy-btn { padding: 12px 25px; background: #f00; color: white; border: none; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
     <div id="dos"></div>
     <div class="ui">
-        <button onclick="launchGame()">DEPLOY BRUTAL DOOM</button>
-        <p id="status" style="color: yellow; font-size: 14px;">Ready to Start.</p>
+        <button id="deploy-btn">DEPLOY BRUTAL DOOM</button>
+        <p id="status" style="color: yellow; font-size: 14px;">Ready.</p>
     </div>
 
     <script>
+        // Only ONE declaration for ci
+        var ci; 
         const container = document.getElementById("dos");
-        let ci;
 
-        // Initialize engine immediately
+        // Initialize engine
         Dos(container).then(runtime => { 
             ci = runtime; 
-            console.log("Engine Loaded");
+            console.log("ENGINE LOADED SUCCESSFULLY");
+            document.getElementById('status').innerText = "Engine Ready. Click Deploy.";
         });
 
-        async function launchGame() {
+        // Use addEventListener to bypass "inline event handler" CSP blocks
+        document.getElementById('deploy-btn').addEventListener('click', async function() {
             const status = document.getElementById('status');
-            
+            if (!ci) return alert("Engine still loading, please wait...");
+
             try {
-                status.innerText = "Step 1: Fetching Game Engine...";
-                // Fetching WAD
+                status.innerText = "Step 1: Fetching DOOM2.WAD...";
                 const wadRes = await fetch("https://archive.org/download/doom-2-iwad/DOOM2.WAD");
                 const wadData = await wadRes.arrayBuffer();
                 await ci.fs.extract(new Uint8Array(wadData), "doom2.wad");
 
-                status.innerText = "Step 2: Fetching Brutal Doom (This takes time)...";
-                // Fetching PK3
+                status.innerText = "Step 2: Fetching Mod (150MB) - Please wait...";
                 const modRes = await fetch("https://archive.org/download/brutal-doom-v-21/brutalv21.pk3");
                 const modData = await modRes.arrayBuffer();
                 await ci.fs.extract(new Uint8Array(modData), "brutalv21.pk3");
 
                 status.innerText = "Step 3: Launching...";
-                // Execute command
                 ci.main(["-iwad", "doom2.wad", "-file", "brutalv21.pk3"]);
             } catch (err) {
-                status.innerText = "ERROR: " + err.message;
+                status.innerText = "CRITICAL ERROR: " + err.message;
                 console.error(err);
             }
-        }
+        });
     </script>
 </body>
 </html>
