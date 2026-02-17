@@ -5,56 +5,44 @@
     <style>
         body { margin: 0; background: #000; color: #f00; text-align: center; font-family: monospace; }
         #dos { width: 100vw; height: 80vh; background: #111; }
-        .controls { padding: 20px; border-top: 2px solid #f00; }
-        .status { color: #0f0; font-weight: bold; }
+        .controls { padding: 20px; background: #222; border-top: 2px solid #f00; }
+        input { background: #333; color: #fff; border: 1px solid #f00; margin: 5px; padding: 5px; }
+        button { padding: 10px 25px; background: #f00; color: #fff; border: none; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #555; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <div id="dos"></div>
     <div class="controls">
-        <div>
-            WAD: <input type="file" id="wad-picker" onchange="checkFiles()"> 
-            PK3: <input type="file" id="pk3-picker" onchange="checkFiles()">
-        </div>
-        <br>
-        <button id="start-btn" onclick="run()" disabled style="padding: 10px 20px; cursor: pointer;">START BRUTAL DOOM</button>
-        <p id="msg">Please upload both files to activate the engine.</p>
+        WAD (The Game): <input type="file" id="wad" onchange="check()">
+        PK3 (The Mod): <input type="file" id="pk3" onchange="check()">
+        <br><br>
+        <button id="go" onclick="run()" disabled>START BRUTAL DOOM</button>
     </div>
 
     <script>
         const container = document.getElementById("dos");
-        let ci; 
-        
-        // Initialize the engine immediately
+        let ci;
         Dos(container).then(runtime => { ci = runtime; });
 
-        function checkFiles() {
-            const hasWad = document.getElementById('wad-picker').files[0];
-            const hasPk3 = document.getElementById('pk3-picker').files[0];
-            const btn = document.getElementById('start-btn');
-            const msg = document.getElementById('msg');
-
-            if (hasWad && hasPk3) {
-                btn.disabled = false;
-                msg.innerText = "READY FOR CARNAGE!";
-                msg.className = "status";
-            }
+        function check() {
+            const w = document.getElementById('wad').files[0];
+            const p = document.getElementById('pk3').files[0];
+            document.getElementById('go').disabled = !(w && p);
         }
 
         async function run() {
-            const wadFile = document.getElementById('wad-picker').files[0];
-            const pk3File = document.getElementById('pk3-picker').files[0];
+            const wFile = document.getElementById('wad').files[0];
+            const pFile = document.getElementById('pk3').files[0];
             
-            // Extract the WAD
-            const wadData = await wadFile.arrayBuffer();
-            await ci.fs.extract(new Uint8Array(wadData), wadFile.name);
+            // Extracting files into the virtual drive
+            const wData = await wFile.arrayBuffer();
+            await ci.fs.extract(new Uint8Array(wData), wFile.name);
+            const pData = await pFile.arrayBuffer();
+            await ci.fs.extract(new Uint8Array(pData), pFile.name);
             
-            // Extract the PK3
-            const pk3Data = await pk3File.arrayBuffer();
-            await ci.fs.extract(new Uint8Array(pk3Data), pk3File.name);
-            
-            // The magic command that executes everything
-            ci.main(["-iwad", wadFile.name, "-file", pk3File.name]);
+            // This tells the engine to skip the C prompt and load the mod
+            ci.main(["-iwad", wFile.name, "-file", pFile.name]);
         }
     </script>
 </body>
